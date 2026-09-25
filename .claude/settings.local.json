@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(mysql -u root -e \"SHOW CREATE VIEW ebs.forecast_view_customer_order\\\\G\")",	    
+      "Bash(mysql -u root -e \"SHOW CREATE VIEW ebs.forecast_view_customer_order\\\\G\")",
+      "Bash(mysql -e \"SHOW CREATE VIEW ebs.forecast_view_customer_order\\\\G\")",
+      "Bash(mysql -u root -e \"SHOW INDEX FROM ebs.forecast_estimates\\\\G\")",
+      "Bash(mysql -e \"SHOW INDEX FROM ebs.forecast_estimates\\\\G\")",
+      "Bash(git *)",
+      "Read(//home/**)",
+      "Read(//root/**)",
+      "Bash(systemctl is-active *)",
+      "Bash(apachectl -V)",
+      "Bash(nginx -v)",
+      "Bash(rsync -av --exclude='vendor/' --exclude='writable/cache/*' --exclude='writable/logs/*' --exclude='writable/session/*' --exclude='writable/debugbar/*' /var/www/ebs/ /var/www/ebsv2/)",
+      "Bash(sudo mkdir *)",
+      "Bash(sudo chown *)",
+      "Bash(rsync -a --exclude='vendor/' --exclude='writable/cache/*' --exclude='writable/logs/*' --exclude='writable/session/*' --exclude='writable/debugbar/*' /var/www/ebs/ /var/www/ebsv2/)",
+      "Bash(awk '{print $1}')",
+      "Read(//tmp/**)",
+      "Bash(awk 'END{print \"randuri=\"NR}' Consum-coloane.csv)",
+      "Bash(awk -F';' '{print \"coloane cu ; =\"NF}')",
+      "Bash(awk -F',' '{print \"coloane cu , =\"NF}')"
+    ]
+  }
+}

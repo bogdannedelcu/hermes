@@ -1,0 +1,305 @@
+.gc-data-container-text {
+    overflow: hidden !important;
+    max-width: none !important;
+    max-height:100px !important;
+    white-space:normal !important;
+}
+
+.w-60px {
+width: 60px;
+}
+
+.w-100px {
+width: 100px;
+}
+
+.w-150px {
+width: 150px;
+}
+
+.w-200px {
+width: 150px;
+}
+
+.w-300px {
+width: 300px;
+}
+
+.w-400px {
+width: 300px;
+}
+
+.w-500px {
+width: 500px;
+}
+
+.w-600px {
+width: 600px;
+}
+
+.minw-100px {
+min-width:100px;
+}
+
+.minw-120px {
+min-width:120px;
+}
+
+.minw-300px {
+min-width:300px;
+}
+
+.minw-400px {
+min-width:400px;
+}
+
+.minw-500px {
+min-width:500px;
+}
+
+.minw-600px {
+min-width:600px;
+}
+
+body {
+--bs-body-font-size: 0.8rem !important;
+}
+
+.card-header {
+	padding-top:4px !important;
+	padding-bottom:2px !important;
+}
+
+.card-options {
+	display:inline-block;
+	white-space:nowrap;
+}
+
+#spreadsheet {
+	margin-left:-2px;
+}
+
+#saveSpreadsheet, #generateCurve, #uploadManualTranselectrica, #uploadProduction {
+	margin-left:3px;
+	margin-right:3px;
+	padding:0;
+}
+
+.fa-bezier-curve {
+	width:100% !important;
+}
+
+.it-md:hover {
+	background-color: AntiqueWhite !important;
+}
+
+.it-av:hover {
+	background-color: Cornsilk !important;
+}
+
+.it-c:hover {
+	background-color: AliceBlue !important;
+}
+
+.it-f:hover {
+	background-color: HoneyDew !important;
+}
+
+.it-r:hover {
+	background-color: LightCyan !important;
+}
+
+.btn-success-active {
+    box-shadow: -2px 0px 2px 2px MediumSeaGreen, 0 2px 2px 2px MediumSeaGreen, 2px 0 2px 2px MediumSeaGreen, 0 -2px 2px 2px MediumSeaGreen;
+}
+
+.btn-primary-active {
+    box-shadow: -2px 0px 2px 2px MediumTurquoise, 0 2px 2px 2px MediumTurquoise, 2px 0 2px 2px MediumTurquoise, 0 -2px 2px 2px MediumTurquoise;
+}
+
+.k-button.k-selected
+{
+    background-color: #f5f5f5 !important;  
+    font-weight:700;
+	box-shadow: 0 0 4px 0 rgb(66 139 202 / 75%);
+}
+
+.k-grid td {
+	white-space: nowrap;
+}
+#grid > div.k-grid-content.k-auto-scrollable > table > tbody > tr > td > p {
+font-size:120%;
+}
+
+/*list items*/
+.k-list-item {
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
+ 
+/*upload stuff*/
+.k-upload-button {
+	/*display: none !important;*/
+}
+.k-upload {
+	width:100%;
+}
+.dropZone {
+	display:flex;
+	padding:5px;
+}
+
+/*dialog stuff*/
+.k-dialog-title {
+    font-weight: 600 !important;
+}
+.k-label.k-form-label {
+    align-self: baseline;
+	max-width:20%;
+}
+.k-form-field {
+	height: 40px;
+}
+
+.a-btn:hover {
+color: #fff !important;
+text-decoration: none;
+}
+
+#cleanupForm, #cacheForm, #healthForm {
+width:400px;
+}
+
+#cleanupForm .k-datepicker {
+width:100px;
+}
+
+#value_type-form-label {
+    width: 100px;
+    max-width: unset;
+}
+
+#curveSettingsForm fieldset:nth-child(1) {
+	margin-top:10px;
+}
+
+#cacheForm .k-form-label, #healthForm .k-form-label {
+width:150px;
+max-width:150px !important;
+}
+
+#keepOpen-form-label, #dayCorrelation-form-label{
+    width: 200px;
+    max-width: unset;
+}
+
+.k-dialog.k-alert>.k-window-content.k-dialog-content {
+font-size:18px;
+}
+
+#ctForm .k-form-fieldset {
+margin-top: 0px;
+}
+
+#ctype-form-label, #simple-form-label, #lastDay-form-label, #intervalZ-form-label, #intervalN-form-label, #temperature_selected_value_type-form-label, #temperature-form-label, #temperature_margin-form-label, #days_margin-form-label, #days_margin_max-form-label, #temperature_margin_max-form-label, #outliers-form-label, #prosumator-form-label, #prod_margin-form-label, #prod_days_margin-form-label,#prod_days_margin_max-form-label, #prod_margin_max-form-label, #prod_ignore-form-label, #outliers_radius-form-label, #outliers_size-form-label, #manual-form-label, #outliers_interval-form-label, #nc_temperature_margin-form-label, #nc_interval_marginZ-form-label, #nc_interval_marginN-form-label, #max_months_before-form-label {
+ 	max-width:unset;
+	width:180px;
+}
+
+#nc_selected_value_type-form-label{
+	max-width:unset;
+	width:100px;
+}
+
+#prod_alt_estimate-form-label{
+	max-width:unset;
+	width:100px;
+}
+
+#profil > div:nth-child(8) > div > span{
+	width:100px;
+}
+
+.k-form-legend {
+font-weight: 600;
+}
+
+/*fix badges*/
+.k-badge-edge {
+    z-index: 100 !important;
+}
+
+/*fix grocery crud*/
+.modal-backdrop.fade.in.show {
+z-index:auto !important;
+}
+
+/*cards*/
+
+.card-master {
+background-color:#d7a2a860 !important;
+}
+
+.card-buysell {
+background-color:#FFF9E5 !important;
+}
+
+.card-realizat {
+background-color:#F0F0F0 !important;
+}
+
+.card-consumptions {
+background-color:#BED6FB !important;
+}
+
+.card-invoices {
+background-color:#C1DCD1 !important;
+}
+
+.card-raport {
+background-color:#0DCAF080 !important;
+}
+
+div.card-realizat input, div.card-consumptions input{
+font-weight:700;
+color:blue;
+}
+
+.tmenu {
+font-size:1.1em !important;
+}
+
+#colCurves {
+	width: 800px !important;
+	max-width:40%;
+    height: 65px;
+}
+
+.forecast-menu {
+	width:max-content;
+}
+
+#tempButtonGroup span {
+	width:10px;
+}
+
+#monthCorrelationForm > div.k-form-layout.k-d-grid > div:nth-child(2) {
+height: 420px;
+}
+
+#tForm > div.k-form-layout.k-d-grid.k-grid-cols-2 > fieldset:nth-child(even) {
+	width:490px;
+}
+
+#tForm > div.k-form-layout.k-d-grid.k-grid-cols-2 > fieldset:nth-child(odd) {
+	margin-left:110px;
+}
+
+.k-form-label, .k-form-hint {
+	white-space:nowrap;
+}
+
+#selectWFDProfile_listbox > li {
+	display:block !important;
+}

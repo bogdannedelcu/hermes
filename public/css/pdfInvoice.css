@@ -1,0 +1,26 @@
+@page {
+  size: 21cm 29.7cm;
+  margin: 0;
+}
+
+body {
+  padding-left: .2in;
+  padding-right: .2in;
+  padding-top: .2in;
+  padding-bottom: .2in;
+}
+
+table td, table td * {
+    vertical-align: top;
+}
+
+table{
+    margin-top:20px;
+}
+
+#invoice-items, #invoice-items td, #invoice-items th {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+.page_break { page-break-before: always; }

@@ -1,0 +1,34 @@
+{
+    "name": "scoumbourdis/upload",
+    "type": "library",
+    "description": "Handle file uploads with extensible validation and storage strategies",
+    "keywords": ["upload", "validation", "file"],
+    "homepage": "http://github.com/codeguy/Upload",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Josh Lockhart",
+            "email": "info@joshlockhart.com",
+            "homepage": "https://github.com/codeguy/"
+        },
+        {
+            "name": "Brandon Savage",
+            "email": "brandon@brandonsavage.net",
+            "homepage": "https://www.brandonsavage.net/"
+        },
+        {
+            "name": "John Skoumbourdis",
+            "homepage": "https://www.web-and-development.com/"
+        }
+    ],
+    "require": {
+        "php": "^7.3|^8.0",
+        "ext-fileinfo": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "3.7.*"
+    },
+    "autoload": {
+        "psr-0": { "Upload": "src" }
+    }
+}
