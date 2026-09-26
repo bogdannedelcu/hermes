@@ -145,7 +145,8 @@ trait MasterDataTools
 	
 	function get_min_max_years($table, $field)
 	{
-		$query = $this->db->query("select date_format(coalesce(min($field),now()),'%Y') AS minY,date_format(coalesce(max($field),now()),'%Y') as maxY FROM $table");
+		// excludem datele invalide (ex. 2000-00-01 generat din year=0/month=0) ca sa nu traga minimul la 2000
+		$query = $this->db->query("select date_format(coalesce(min($field),now()),'%Y') AS minY,date_format(coalesce(max($field),now()),'%Y') as maxY FROM $table WHERE $field IS NOT NULL AND MONTH($field) > 0");
 		$result = $query->getRowArray();
 		if(!$result) return ['minY'=>date("Y"), 'maxY'=>date("Y")];
 

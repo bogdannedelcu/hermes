@@ -148,12 +148,14 @@ class ImportDailyReadingsModel extends Model
 				// insert into daily readings aggregate				
 				$asql = "INSERT IGNORE INTO customer_daily_readings_all (customer_id, `year`, `month`)
 						 SELECT $customerID, YEAR(reading_datetime), MONTH(reading_datetime) FROM $sourceDataTable
+						 WHERE reading_datetime IS NOT NULL AND MONTH(reading_datetime) > 0
 						 GROUP BY YEAR(reading_datetime),MONTH(reading_datetime)";
 				$fqIDs[] = $sqlQueue->sendUniqueItem([$asql],"customer_daily_readings_all");
-			
+
 				// insert into far aggregate
 				$asql = "INSERT IGNORE INTO customers_far_all (customer_id, `year`, `month`)
 						 SELECT $customerID, YEAR(reading_datetime), MONTH(reading_datetime) FROM $sourceDataTable
+						 WHERE reading_datetime IS NOT NULL AND MONTH(reading_datetime) > 0
 						 GROUP BY YEAR(reading_datetime),MONTH(reading_datetime)";
 				$fqIDs[] = $sqlQueue->sendUniqueItem([$asql],"customers_far_all");
 			}
