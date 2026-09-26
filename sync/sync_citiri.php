@@ -19,6 +19,7 @@
  */
 
 require __DIR__ . '/lib.php';
+job_begin('citiri');
 
 $GLOBALS['LOGFILE'] = __DIR__ . '/logs/citiri-' . date('Y-m-d') . '.log';
 $opts    = getopt('', ['years::', 'dry']);

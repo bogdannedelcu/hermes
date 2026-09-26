@@ -20,6 +20,77 @@ function logline($msg) {
     $line = date('Y-m-d H:i:s') . ' | ' . $msg . "\n";
     echo $line;
     if (!empty($GLOBALS['LOGFILE'])) @file_put_contents($GLOBALS['LOGFILE'], $line, FILE_APPEND | LOCK_EX);
+    if (isset($GLOBALS['JOB_BUF'])) {
+        $GLOBALS['JOB_BUF'][] = $line;
+        if (count($GLOBALS['JOB_BUF']) > 300) array_shift($GLOBALS['JOB_BUF']);
+    }
+}
+
+/** Jurnal joburi (idempotent). */
+function ensure_job_table() {
+    db()->query("CREATE TABLE IF NOT EXISTS sync_job_runs (
+        id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        job         VARCHAR(40)  NOT NULL,
+        started_at  DATETIME     NOT NULL,
+        finished_at DATETIME     DEFAULT NULL,
+        status      ENUM('running','ok','fail') NOT NULL DEFAULT 'running',
+        summary     VARCHAR(255) DEFAULT NULL,
+        details     MEDIUMTEXT,
+        PRIMARY KEY (id), KEY k_job (job), KEY k_started (started_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+/**
+ * Deschide un rand de jurnal pentru rularea curenta. Instrumentare minima: 1 linie in job.
+ * Inchiderea e automata la finalul procesului (shutdown), cu status ok/fail si summary
+ * extras din ultima linie `result:`. Nu arunca niciodata (nu poate strica sincronizarea).
+ */
+function job_begin($job) {
+    try {
+        ensure_job_table();
+        $GLOBALS['JOB_BUF'] = [];
+        $GLOBALS['JOB_DONE'] = false;
+        $j = db()->real_escape_string($job);
+        db()->query("INSERT INTO sync_job_runs (job, started_at, status) VALUES ('$j', NOW(), 'running')");
+        $GLOBALS['JOB_ID'] = db()->insert_id;
+        register_shutdown_function(function () {
+            if (empty($GLOBALS['JOB_DONE'])) {
+                $e = error_get_last();
+                $fatal = $e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true);
+                job_end($fatal ? 'fail' : 'ok');
+            }
+        });
+        return $GLOBALS['JOB_ID'];
+    } catch (\Throwable $e) { return null; }
+}
+
+/** Inchide randul de jurnal (o singura data). $status implicit 'ok'; downgrade la 'fail' daca logul are FAIL. */
+function job_end($status = 'ok', $summary = '') {
+    try {
+        if (!empty($GLOBALS['JOB_DONE'])) return;
+        $GLOBALS['JOB_DONE'] = true;
+        $id = $GLOBALS['JOB_ID'] ?? 0;
+        if (!$id) return;
+        $buf = $GLOBALS['JOB_BUF'] ?? [];
+        if ($summary === '') {
+            foreach (array_reverse($buf) as $ln) {
+                if (stripos($ln, 'result:') !== false || stripos($ln, 'created=') !== false) {
+                    $summary = trim(preg_replace('/^\S+ \S+ \| /', '', rtrim($ln))); break;
+                }
+            }
+        }
+        if ($summary === '') {   // fallback: ultima linie relevanta (ex. "nothing to sync.")
+            foreach (array_reverse($buf) as $ln) {
+                $t = trim(preg_replace('/^\S+ \S+ \| /', '', rtrim($ln)));
+                if ($t !== '' && strpos($t, '===') === false) { $summary = $t; break; }
+            }
+        }
+        foreach ($buf as $ln) { if (preg_match('/\bFAIL\b|fail=[1-9]/', $ln)) { if ($status === 'ok') $status = 'fail'; break; } }
+        $details = implode('', array_slice($buf, -60));
+        $st = db()->prepare("UPDATE sync_job_runs SET finished_at=NOW(), status=?, summary=?, details=? WHERE id=?");
+        $st->bind_param('sssi', $status, $summary, $details, $id);
+        $st->execute(); $st->close();
+    } catch (\Throwable $e) { /* jurnalul nu trebuie sa strice jobul */ }
 }
 
 /** Ensure the sync_state table exists (idempotent). */

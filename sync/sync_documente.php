@@ -11,6 +11,7 @@
  */
 
 require __DIR__ . '/lib.php';
+job_begin('documente');
 
 $GLOBALS['LOGFILE'] = __DIR__ . '/logs/documente-' . date('Y-m-d') . '.log';
 $opts    = getopt('', ['from::', 'dry']);

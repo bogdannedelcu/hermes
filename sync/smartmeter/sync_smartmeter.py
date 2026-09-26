@@ -29,7 +29,11 @@ ap.add_argument('--dry', action='store_true')
 ap.add_argument('--no-import', action='store_true', help='doar arhiva, fara actual_readings')
 a = ap.parse_args()
 
-def log(m): print(time.strftime('%Y-%m-%d %H:%M:%S'), '|', m, flush=True)
+import atexit
+LOGBUF = []
+def log(m):
+    line = time.strftime('%Y-%m-%d %H:%M:%S') + ' | ' + str(m)
+    LOGBUF.append(line + '\n'); print(line, flush=True)
 
 db = json.loads(subprocess.check_output(
     ['php8.2', '-r', f"echo json_encode((require '{BASE}/config.php')['db']);"]))
@@ -51,6 +55,38 @@ with conn.cursor() as cur:
         KEY k_date (sample_date), KEY k_type (energy_type)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
 conn.commit()
+
+# --- jurnal job (sync_job_runs) — best-effort, nu strica jobul ---
+_JOB = {'id': None}
+def _job_begin():
+    try:
+        with conn.cursor() as c:
+            c.execute("""CREATE TABLE IF NOT EXISTS sync_job_runs (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, job VARCHAR(40) NOT NULL,
+                started_at DATETIME NOT NULL, finished_at DATETIME DEFAULT NULL,
+                status ENUM('running','ok','fail') NOT NULL DEFAULT 'running',
+                summary VARCHAR(255) DEFAULT NULL, details MEDIUMTEXT,
+                PRIMARY KEY (id), KEY k_job (job), KEY k_started (started_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+            c.execute("INSERT INTO sync_job_runs (job, started_at, status) VALUES ('smartmeter', NOW(), 'running')")
+            _JOB['id'] = c.lastrowid
+        conn.commit()
+    except Exception: pass
+def _job_end():
+    try:
+        if not _JOB['id']: return
+        parts = []
+        for kw in ('ARHIVA', 'IMPORT 1:1', 'result'):
+            for ln in reversed(LOGBUF):
+                if kw in ln: parts.append(ln.split('| ', 1)[-1].strip()); break
+        summary = ' | '.join(parts)[:255]
+        status = 'fail' if any(('err' in l.lower() or 'traceback' in l.lower()) for l in LOGBUF) else 'ok'
+        with conn.cursor() as c:
+            c.execute("UPDATE sync_job_runs SET finished_at=NOW(), status=%s, summary=%s, details=%s WHERE id=%s",
+                      (status, summary, ''.join(LOGBUF[-60:]), _JOB['id']))
+        conn.commit()
+    except Exception: pass
+_job_begin(); atexit.register(_job_end)
 
 # --- mapare POD -> (curve_id, customer_id) DOAR curbe masurate 1:1 ---
 POD2CURVE = {}

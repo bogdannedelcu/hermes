@@ -9,6 +9,7 @@
  */
 
 require __DIR__ . '/lib.php';
+job_begin('facturi');
 
 $opts    = getopt('', ['from::', 'dry']);
 $from    = $opts['from'] ?? cfg()['apih']['from'];

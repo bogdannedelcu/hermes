@@ -225,6 +225,8 @@
 				<li><a class="dropdown-item it-r" href="<?php echo site_url('export')?>">Raport ANRE</a></li>
 				<li><a class="dropdown-item it-r" href="<?php echo site_url('export/raport_consumlunar')?>">Raport Consum Lunar</a></li>
 				<li><hr class="dropdown-divider"></li>
+				<li><a class="dropdown-item it-r" href="<?php echo site_url('sincronizari')?>">Sincronizari</a></li>
+				<li><hr class="dropdown-divider"></li>
 				<li><a class="dropdown-item it-r" href="<?php echo site_url('buysell/pandl')?>">Dezechilibru</a></li>
 				<li><a class="dropdown-item it-r" href="<?php echo site_url('buysell/monthly')?>">Balanta Lunara</a></li>	
 				<!--<a class="dropdown-item" href="<?php echo site_url('ebs/raport?view=view_raport_anre_1')?>">Raport ANRE 1</a>					

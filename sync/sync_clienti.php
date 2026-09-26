@@ -9,6 +9,7 @@
  */
 
 require __DIR__ . '/lib.php';
+job_begin('clienti');
 
 $GLOBALS['LOGFILE'] = __DIR__ . '/logs/clienti-' . date('Y-m-d') . '.log';
 $dryOnly = in_array('--dry', $argv, true);

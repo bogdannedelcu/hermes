@@ -15,6 +15,7 @@
  */
 
 require __DIR__ . '/lib.php';
+job_begin('contracte');
 
 $GLOBALS['LOGFILE'] = __DIR__ . '/logs/contracte-' . date('Y-m-d') . '.log';
 $dryOnly = in_array('--dry', $argv, true);
