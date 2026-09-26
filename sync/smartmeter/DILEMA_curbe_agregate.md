@@ -1,96 +1,136 @@
-# Curbe agregate vs. curbe individuale — decizie necesară
+# Curbe agregate vs. individuale — clarificare pentru echipă
 
-**Context:** Am obținut acces la platforma SmartMeter (Rețele Electrice, stream Kafka) care ne
-livrează **curbe de sarcină REALE la 15 minute, per POD** (`supplyPointId`). Până acum, pentru o
-parte din PODuri, ebsv2 **nu avea** măsurătoare individuală — folosea o **curbă agregată împărțită
-pe cotă**. Acest document descrie situația și decizia de luat.
+**Subiect:** Am obținut acces la platforma SmartMeter (Rețele Electrice, stream Kafka) care ne
+livrează **curbe de sarcină REALE la 15 minute, per POD**. O parte din PODuri erau reprezentate în
+ebsv2 doar printr-o **curbă agregată împărțită pe cotă** (estimare), nu prin măsurătoare individuală.
+Acest document lămurește situația și **decizia de luat**.
 
 ---
 
-## 1. Cum stau datele azi în ebsv2
+## 1. Concept: POD ≠ curbă
 
 Un „POD" (punct de consum / contor) nu ține date direct — datele orare stau pe o **curbă**
 (`curve_id`). O curbă măsurată poate fi:
 
 - **1:1** — o curbă = un singur POD (măsurătoare individuală reală). → **754 curbe**
-- **Agregată** — o curbă = **mai multe PODuri** la un loc, legate prin tabela de alocare
-  `actual_curves_variance`. → **132 curbe măsurate agregate**
+- **Agregată** — o curbă = **mai multe PODuri** la un loc (contor/grup de echilibrare comun),
+  legate prin tabela `actual_curves_variance`. → **132 curbe măsurate agregate**
 
-Pentru o curbă agregată, consumul fiecărui POD se obține azi prin **împărțire pe cotă**:
+La o curbă agregată, consumul fiecărui POD se obține prin **împărțire pe cotă lunară**:
 
-> consum POD (la fiecare 15 min) = forma curbei agregate × (consum_lunar_POD ÷ consum_lunar_total_grup)
+> consum POD (la 15 min) = forma curbei agregate × (consum_lunar_POD ÷ consum_lunar_total_grup)
 
-Adică per POD e o **estimare** derivată din agregat — **nu** o măsurătoare individuală.
+Adică per POD e o **estimare**, nu o măsurătoare individuală.
 
 ---
 
-## 2. Cât ne afectează
+## 2. Cifre
 
 | | număr |
 |---|---|
-| Curbe măsurate **1:1** (deja individuale) | 754 |
+| Curbe măsurate **1:1** | 754 |
 | Curbe măsurate **agregate** (>1 POD) | **132** |
 | dintre ele, cu PODuri din feed-ul SmartMeter (`RO...`) | **105** |
-| PODuri acoperite de aceste curbe agregate | **~733** |
+| PODuri acoperite de curbele agregate | **~733** |
 | PODuri max pe o singură curbă agregată | 61 |
 
-Feed-ul SmartMeter ne dă acum, pentru aceste ~733 PODuri, **valoarea reală a fiecăruia**, nu doar
-suma grupului.
+---
+
+## 2b. Câte PODuri au MAI MULTE curbe asociate
+
+Un POD poate fi legat de mai multe curbe (în tabela `actual_curves_variance`):
+
+| curbe distincte / POD | nr. PODuri |
+|---|---|
+| 1 curbă | 1247 |
+| 2 curbe | 105 |
+| 3 curbe | 22 |
+| 4 curbe | 3 |
+| 16 curbe | 1 |
+| **Total cu >1 curbă** | **131** |
+
+**De ce au mai multe curbe** (din cele 131):
+- **94 PODuri — reasignare în timp:** în fiecare lună au **o singură** curbă, dar aceasta se
+  schimbă de la o perioadă la alta (POD-ul a fost mutat de la un grup/curbă la altul). Pe orice lună
+  dată, maparea e **neambiguă** — nu ridică probleme.
+- **37 PODuri — 2 curbe în ACEEAȘI lună:** consumul lor e împărțit simultan pe 2 curbe. Acestea
+  sunt cazurile delicate (un POD contribuie la 2 curbe agregate în același timp).
+
+**Exemplu (reasignare în timp)** — `RO001E109186274`:
+- curba `3062` din 2024-08 → 2025-05, apoi
+- curba `3282` din 2025-07 → prezent.
+
+> Notă tehnică: pentru cele **37 PODuri cu 2 curbe/lună**, trimiterea per-POD în VoltApp trebuie să
+> **însumeze** contribuțiile ambelor curbe pe acea lună (altfel una o suprascrie pe cealaltă). E un
+> caz de tratat separat la individualizare.
 
 ---
 
 ## 3. Exemplu concret — curba `1030`
 
-Curba `30ZFHRME-RELMS-QB20705985JT` agregă **8 PODuri, toate ale aceluiași client**
-(GKS SPECIAL ADVERTISING S.R.L., id 424):
+`30ZFHRME-RELMS-QB20705985JT` agregă **8 PODuri, toate ale aceluiași client**
+(GKS SPECIAL ADVERTISING S.R.L.):
 
 ```
 RO001E109128809, RO001E109128810, RO001E109128821, RO001E109128832,
 RO001E109128843, RO001E109128854, RO001E109128865, RO001E109131577
 ```
 
-**Azi:** o singură curbă măsurată = suma celor 8; fiecare POD primește o felie estimată din ea.
-**Cu feed-ul:** avem curba reală, separată, pentru fiecare din cele 8 puncte.
+**Azi:** o curbă măsurată = suma celor 8; fiecare POD primește o felie estimată din ea.
+**Cu feed-ul SmartMeter:** avem curba reală, separată, pentru fiecare din cele 8 puncte.
 
 ---
 
-## 4. Dilema — două variante
+## 4. Ce am făcut deja (stare curentă)
 
-### Varianta A — Păstrăm curbele agregate (fără schimbări)
-Alimentăm curba agregată din feed: însumăm cei N PODuri din feed → scriem în curba agregată.
-Structura rămâne neschimbată; per POD se face în continuare împărțirea pe cotă.
+1. **Feed SmartMeter conectat** (Kafka, read-only) și **arhivat durabil** zilnic în tabela
+   `smartmeter_lpo` — TOATE PODurile (inclusiv cele agregate). Astfel **nu pierdem datele**
+   nici dacă decizia întârzie peste retenția Kafka (~6 săptămâni).
+2. **Import 1:1 real** din feed → `actual_readings` pentru curbele individuale (cron zilnic).
+3. **Trimitere în VoltApp** (`sync_citiri`) actualizată: acoperă acum **522 PODuri** (față de ~424):
+   - curbe **1:1** → trimise sub POD-ul real;
+   - curbe **agregate** → trimise **împărțite pe cotă** (estimare), pentru lunile care au consum
+     lunar încărcat (până în august; septembrie intră după încărcarea consumului lunar).
 
-- ✅ Zero schimbări de model; rapoartele/prognoza merg identic.
-- ❌ Reagreghezi apoi reîmparți pe cotă → **pierzi datele reale per POD** (deși le avem).
-- ❌ Necesită ca **toate** PODurile grupului să fie în feed; dacă unele lipsesc, suma e incompletă.
+Deci în acest moment agregatele **ajung** în VoltApp, dar ca **estimare pe cotă**, nu ca măsurătoare
+individuală reală.
 
-### Varianta B — Creăm curbe individuale 1:1 (valorificăm datele reale)
-Pentru fiecare POD din grup creăm o curbă `masurata` proprie (curve_name = POD) și scriem datele
-reale ale lui. „Promovăm" PODurile din estimat-agregat în măsurat-individual.
+---
+
+## 5. Decizia — două variante
+
+### Varianta A — Păstrăm curbele agregate (estimare pe cotă)
+Rămâne modelul actual: o curbă agregată, împărțită pe PODuri după consumul lunar.
+
+- ✅ Zero schimbări de model; rapoartele/prognoza/facturarea merg identic.
+- ✅ Deja funcțional în VoltApp.
+- ❌ Per POD rămâne **estimare**, deși avem datele reale în feed.
+- ❌ Necesită ca toate PODurile grupului să fie în feed pentru o sumă corectă.
+
+### Varianta B — Individualizăm (curbe 1:1 reale din feed)
+Pentru fiecare POD din grup creăm o curbă `masurata` proprie și scriem datele reale ale lui.
 
 - ✅ Precizie maximă — fiecare POD cu curba lui reală, la 15 min.
 - ✅ Facturare / alocare / prognoză mult mai exacte per client.
-- ❌ Schimbare de model: ~733 curbe noi + rescrierea modului de alocare pentru grupurile afectate.
-- ❌ Trebuie decis ce facem cu istoricul (păstrăm agregatul vechi, migrăm, rulăm în paralel?).
+- ❌ Schimbare de model: ~733 curbe noi + rescrierea alocării pentru grupurile afectate.
+- ❌ De decis ce facem cu istoricul (păstrăm agregatul, migrăm, rulăm în paralel?).
 
 ---
 
-## 5. Recomandare
+## 6. Recomandare & întrebări pentru echipă
 
-- Pentru cele **754 curbe deja 1:1** → pornim importul real din feed **acum** (fără decizie
-  necesară; doar umplem cu date mai bune).
-- Pentru cele **132 agregate** → **decizie de business/tehnică cu clientul**:
-  - dacă precizia per-POD contează pentru facturare/raportare → **Varianta B** (individualizare),
-    eventual etapizat (întâi clienții mari / prosumatorii);
-  - dacă se preferă stabilitatea modelului actual → **Varianta A** (alimentăm agregatele).
+- Cele **754 curbe deja 1:1** → import real din feed, **fără decizie** (doar date mai bune).
+- Cele **132 agregate** → **decizie de business/tehnică**:
 
-**Întrebări pentru client:**
-1. Individualizăm PODurile agregate acum că avem date reale, sau păstrăm agregarea?
-2. Dacă individualizăm — pentru toate cele 733 sau doar un subset (mari/prosumatori)?
-3. Ce facem cu istoricul curbelor agregate (păstrare vs. migrare)?
-4. Impactul asupra facturării și prognozei — cine validează?
+**Întrebări:**
+1. Individualizăm PODurile agregate acum că avem date reale, sau păstrăm agregarea pe cotă?
+2. Dacă individualizăm — toate cele ~733 sau doar un subset (clienți mari / prosumatori)?
+3. Ce facem cu istoricul curbelor agregate (păstrare vs. migrare vs. paralel)?
+4. Impactul asupra **facturării** și **prognozei** — cine validează?
+5. Până la decizie, e OK ca în VoltApp agregatele să apară ca **estimare pe cotă** (așa e acum)?
 
 ---
 
-*Notă tehnică: feed-ul confirmă ~150–270 PODuri raportează A1 (consum activ) pe zi, la freq 15 sau
-60 min; datele merg înapoi ~5–6 săptămâni în topic. Import 1:1 deja în lucru.*
+*Notă tehnică: feed-ul confirmă ~150–270 PODuri raportează consum activ (A1) pe zi, la freq 15 sau
+60 min; date disponibile ~5–6 săptămâni în topic, dar arhivate durabil la noi. Fără presiune de timp
+pe decizie — nu pierdem date.*
