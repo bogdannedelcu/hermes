@@ -81,15 +81,23 @@ class Sincronizari extends BaseController
         $distCond = ($dist === '' || $dist === 'null') ? "(p.distributor_id IS NULL OR p.distributor_id=0)"
                                                        : "p.distributor_id=" . (int)$dist;
         $rows = $db->query(
-            "SELECT p.pod_no, cu.customer_name, cu.customer_vat_code cui
+            "SELECT p.pod_no, cu.customer_name, cu.customer_vat_code cui,
+                    COALESCE(d.distributor_name,'(neconfigurat)') dist,
+                    CASE WHEN ctr.open_cnt > 0 THEN 'nedeterminat'
+                         ELSE DATE_FORMAT(ctr.exp, '%Y-%m-%d') END AS contract_exp
                FROM pods p
                JOIN customers cu ON cu.customer_id=p.customer_id
+               LEFT JOIN distributors d ON d.distributor_id=p.distributor_id
+               LEFT JOIN (SELECT customer_id, MAX(contract_stop) exp, SUM(contract_stop IS NULL) open_cnt
+                            FROM contracts WHERE contract_stop IS NULL OR contract_stop >= NOW()
+                           GROUP BY customer_id) ctr ON ctr.customer_id=p.customer_id
               WHERE p.pod_no IN (" . $this->universeSql() . ") AND $distCond
                 AND p.pod_no NOT IN (SELECT pod FROM api_pod_reads WHERE read_date=" . $db->escape($day) . ")
               GROUP BY p.pod_no ORDER BY cu.customer_name, p.pod_no")->getResultArray();
 
-        $h = '<table class="table table-sm"><thead><tr><th>POD</th><th>Client</th><th>CUI</th></tr></thead><tbody>';
-        foreach ($rows as $r) $h .= '<tr><td>' . esc($r['pod_no']) . '</td><td>' . esc($r['customer_name']) . '</td><td>' . esc($r['cui']) . '</td></tr>';
+        $h = '<table class="table table-sm"><thead><tr><th>POD</th><th>Client</th><th>CUI</th><th>Distribuitor</th><th>Contract expiră</th></tr></thead><tbody>';
+        foreach ($rows as $r) $h .= '<tr><td>' . esc($r['pod_no']) . '</td><td>' . esc($r['customer_name']) . '</td><td>' . esc($r['cui'])
+              . '</td><td class="small">' . esc($r['dist']) . '</td><td>' . esc($r['contract_exp'] ?? '—') . '</td></tr>';
         $h .= '</tbody></table>';
         return $this->response->setBody('<p class="small text-muted">' . count($rows) . ' PODuri necitite pe ' . esc($day) . '</p>' . $h);
     }
