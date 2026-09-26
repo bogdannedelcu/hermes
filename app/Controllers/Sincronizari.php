@@ -13,12 +13,14 @@ class Sincronizari extends BaseController
     /** prag "consum recent": inceputul lunii de acum ~4 luni */
     private function recent() { return date('Y-m-01', strtotime('-4 months')); }
 
-    /** subquery: PODurile consumatorilor reali (activ + consum recent) */
+    /** subquery: PODurile consumatorilor reali (POD activ + client activ + CONTRACT activ + consum recent) */
     private function universeSql() {
         return "SELECT DISTINCT p.pod_no
                   FROM pods p
                   JOIN customers c ON c.customer_id=p.customer_id AND c.customer_status='Activ'
                   JOIN consumptions co ON co.pod=p.pod_no AND co.consumption_date >= " . $this->db()->escape($this->recent()) . "
+                  JOIN (SELECT DISTINCT customer_id FROM contracts
+                         WHERE contract_stop IS NULL OR contract_stop >= NOW()) ct ON ct.customer_id=p.customer_id
                  WHERE p.pod_status='Activ'";
     }
     private function db() { return \Config\Database::connect(); }
@@ -58,12 +60,10 @@ class Sincronizari extends BaseController
             "SELECT p.distributor_id, COALESCE(d.distributor_name,'(neconfigurat)') dist,
                     COUNT(DISTINCT p.pod_no) necitite
                FROM pods p
-               JOIN customers c ON c.customer_id=p.customer_id AND c.customer_status='Activ'
-               JOIN consumptions co ON co.pod=p.pod_no AND co.consumption_date >= " . $db->escape($this->recent()) . "
                LEFT JOIN distributors d ON d.distributor_id=p.distributor_id
-              WHERE p.pod_status='Activ'
+              WHERE p.pod_no IN ($uni)
                 AND p.pod_no NOT IN (SELECT pod FROM api_pod_reads WHERE read_date=" . $db->escape($day) . ")
-              GROUP BY p.distributor_id ORDER BY necitite DESC", )->getResultArray() : [];
+              GROUP BY p.distributor_id ORDER BY necitite DESC")->getResultArray() : [];
 
         $out['data'] = $this->data;
         return view('sincronizari', $out);
@@ -83,9 +83,8 @@ class Sincronizari extends BaseController
         $rows = $db->query(
             "SELECT p.pod_no, cu.customer_name, cu.customer_vat_code cui
                FROM pods p
-               JOIN customers cu ON cu.customer_id=p.customer_id AND cu.customer_status='Activ'
-               JOIN consumptions co ON co.pod=p.pod_no AND co.consumption_date >= " . $db->escape($this->recent()) . "
-              WHERE p.pod_status='Activ' AND $distCond
+               JOIN customers cu ON cu.customer_id=p.customer_id
+              WHERE p.pod_no IN (" . $this->universeSql() . ") AND $distCond
                 AND p.pod_no NOT IN (SELECT pod FROM api_pod_reads WHERE read_date=" . $db->escape($day) . ")
               GROUP BY p.pod_no ORDER BY cu.customer_name, p.pod_no")->getResultArray();
 
