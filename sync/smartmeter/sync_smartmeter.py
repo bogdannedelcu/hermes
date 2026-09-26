@@ -172,6 +172,22 @@ with conn.cursor() as cur:
 conn.commit()
 log(f'ARHIVA smartmeter_lpo: {len(arows)} inregistrari upsertate')
 
+# --- acoperire zilnica: marcheaza PODurile A1 citite pe zi (pt chart/lista) ---
+try:
+    reads = set((day, pod) for (pod, day, etype, meter) in arch if etype == 'A1')
+    with conn.cursor() as cur:
+        cur.execute("""CREATE TABLE IF NOT EXISTS api_pod_reads (
+            read_date DATE NOT NULL, pod VARCHAR(40) NOT NULL, source VARCHAR(20) NOT NULL,
+            captured_at DATETIME NOT NULL, PRIMARY KEY (read_date, pod, source), KEY k_date (read_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+        nowc = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cur.executemany("INSERT IGNORE INTO api_pod_reads (read_date,pod,source,captured_at) VALUES (%s,%s,'smartmeter',%s)",
+                        [(day, pod, nowc) for (day, pod) in reads])
+    conn.commit()
+    log(f'acoperire: {len(reads)} (zi,POD) marcate in api_pod_reads')
+except Exception as e:
+    log(f'acoperire skip: {e}')
+
 if a.no_import:
     log('=== done (doar arhiva) ==='); sys.exit(0)
 

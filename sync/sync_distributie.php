@@ -100,5 +100,6 @@ foreach ($byMonth as $mo => $vals) {
     }
     logline("  $tbl: $written/" . $rowsTotal . ' scrise (cumulat)');
 }
+api_pod_reads_record('distributie', $date, array_keys($podsSeen));   // acoperire zilnica
 logline("result: date=$date poduri=" . count($podsSeen) . " randuri_scrise=$written");
 logline('=== done ===');

@@ -26,6 +26,34 @@ function logline($msg) {
     }
 }
 
+/** Acoperire zilnica: ce POD s-a citit prin API in ziua X (pt chart). */
+function ensure_pod_reads_table() {
+    db()->query("CREATE TABLE IF NOT EXISTS api_pod_reads (
+        read_date   DATE        NOT NULL,
+        pod         VARCHAR(40) NOT NULL,
+        source      VARCHAR(20) NOT NULL,
+        captured_at DATETIME    NOT NULL,
+        PRIMARY KEY (read_date, pod, source), KEY k_date (read_date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+/** Marcheaza PODurile citite intr-o zi printr-o sursa API. Fail-safe. */
+function api_pod_reads_record($source, $date, array $pods) {
+    if (!$pods) return;
+    try {
+        ensure_pod_reads_table();
+        $s = db()->real_escape_string($source);
+        $d = db()->real_escape_string(substr($date, 0, 10));
+        $vals = [];
+        foreach (array_unique($pods) as $p) {
+            if ($p === '' || $p === null) continue;
+            $vals[] = "('$d','" . db()->real_escape_string((string)$p) . "','$s',NOW())";
+        }
+        foreach (array_chunk($vals, 1000) as $ch)
+            db()->query("INSERT IGNORE INTO api_pod_reads (read_date,pod,source,captured_at) VALUES " . implode(',', $ch));
+    } catch (\Throwable $e) { /* nu strica jobul */ }
+}
+
 /** Jurnal joburi (idempotent). */
 function ensure_job_table() {
     db()->query("CREATE TABLE IF NOT EXISTS sync_job_runs (
