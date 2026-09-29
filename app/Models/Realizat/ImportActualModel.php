@@ -682,10 +682,18 @@ class ImportActualModel extends Model
 			$wStr .= " ac.curve_id IN ('".implode("','",$includedCurves)."') AND";
 		
 		$wStr2 = '';
-		
-		if(count($includedPODs)>0 && !empty($includedPODs[0]))
-			$wStr2 = " where A.PODs in ('".implode("','",$includedPODs)."') ";
-			
+
+		// Filtru pe PODurile selectate: mapam POD -> curbe (curve_name=POD SAU variance) si filtram
+		// pe curve_id, ca deselectarea unui POD sa recalculeze raportul (altfel PODurile erau ignorate).
+		$podsSan = array_filter(array_map(fn($p) => preg_replace('/[^A-Za-z0-9]/', '', (string)$p), $includedPODs));
+		if($podsSan)
+		{
+			$podList = "'" . implode("','", $podsSan) . "'";
+			$wStr .= " ar.curve_id IN (
+				SELECT curve_id FROM actual_curves WHERE curve_name IN ($podList)
+				UNION SELECT curve_id FROM actual_curves_variance WHERE pod IN ($podList)) AND ";
+		}
+
 		
 		$monthStart = date('Y-m-01', $date);
 		$wStr .= " reading_datetime >= '$monthStart' AND reading_datetime < DATE_ADD('$monthStart', INTERVAL 1 MONTH)";
