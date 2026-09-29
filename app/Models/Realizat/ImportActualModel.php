@@ -543,60 +543,36 @@ class ImportActualModel extends Model
 	function getPODsByDistributorCustomer($distributorID,$customersIDs,$date,$includedCurves,$flat=false)
 	{
 		$result = [];
-		$wStr = '';
-		
-		if(is_numeric($distributorID) && $distributorID >0)
-			$wStr.= " ac.distributor_id = $distributorID and ";	
-			//$wStr.= " p.distributor_id = $distributorID and ";
-			
-		
-		if(!empty($customersIDs))
-		{
+		$ym = explode('-', $date);
+		$year  = (int)$ym[0];
+		$month = (int)$ym[1];
+		$tableName = 'actual_readings_' . $month;
 
-			/*$sql = "SELECT DISTINCT(p.pod_no) FROM customers c 
-											JOIN pods p ON c.customer_id = p.customer_id
-											WHERE $wStr c.customer_id in ($customersIDs)
-											ORDER BY c.customer_name");*/
+		// Curbele care au date orare in luna (filtru optional pe distribuitor / curbe alese)
+		$cw = "ar.year = $year";
+		if (is_numeric($distributorID) && $distributorID > 0) $cw .= " AND ac.distributor_id = $distributorID";
+		if (!empty($includedCurves))                          $cw .= " AND ar.curve_id IN ($includedCurves)";
+		$curvesSub = "SELECT DISTINCT ar.curve_id FROM $tableName ar
+		              JOIN actual_curves ac ON ac.curve_id = ar.curve_id WHERE $cw";
 
-			$ym = explode('-',$date);
-			$year = $ym[0];
-			$month = $ym[1];
-			
-			$tableName = 'actual_readings_'.(int)$month;
-			
-			if(!empty($includedCurves))
-			{
-				$wStr .= " ar.curve_id IN ($includedCurves) AND ";
-			}
-			
-			$sql = "SELECT DISTINCT pod AS pod_no
-			FROM actual_curves_variance acv
-			JOIN pods p on acv.pod = p.pod_no
-			WHERE acv.supplier_id = ".$_SESSION['select-supplier']." 
-			AND curve_id IN (SELECT DISTINCT ar.curve_id FROM $tableName ar JOIN actual_curves ac ON ar.curve_id = ac.curve_id WHERE $wStr YEAR(ar.reading_datetime)=$year AND MONTH(ar.reading_datetime)=$month)
-			AND year(acv.consumption_date) = $year and month(acv.consumption_date) = $month
-			and p.customer_id in ($customersIDs)";		
-			
-			log_message("error",$sql);
-			$query = $this->db->query($sql);
-			
-			if($flat)
-			{
-				foreach($query->getResultArray() as $r)
-					array_push($result,$r['pod_no']);
-				
-				return $result;
-				
-			}
-			
-			$result['data'] = $query->getResultArray();
-			$result['total'] = 0;//$query->countAllResults();
+		// Sursa PODurilor = actual_readings (ca la filtrul de Clienti), NU consumptions/variance-pe-luna.
+		// Maparea curba->POD: variance (orice perioada) SAU curve_name=POD -> merge si pe luna curenta.
+		$custCond = !empty($customersIDs) ? " AND p.customer_id IN ($customersIDs)" : '';
+		$sql = "SELECT DISTINCT m.pod AS pod_no
+		        FROM ( SELECT acv.pod, acv.curve_id FROM actual_curves_variance acv
+		               UNION
+		               SELECT ac2.curve_name AS pod, ac2.curve_id FROM actual_curves ac2 WHERE ac2.curve_type='masurata' ) m
+		        JOIN pods p ON p.pod_no = m.pod
+		        WHERE m.curve_id IN ($curvesSub) $custCond
+		        ORDER BY m.pod";
+		$query = $this->db->query($sql);
+
+		if ($flat) {
+			foreach ($query->getResultArray() as $r) array_push($result, $r['pod_no']);
+			return $result;
 		}
-		else
-		{
-			$result['data'] = [];
-			$result['total'] = 0;
-		}
+		$result['data']  = $query->getResultArray();
+		$result['total'] = 0;
 		return $result;
 	}
 	
