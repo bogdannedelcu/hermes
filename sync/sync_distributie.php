@@ -59,10 +59,10 @@ foreach ($meters as $m) {
     $podsSeen[$pod] = true;
     foreach (($m['readings'] ?? []) as $rd) {
         if (empty($rd['timeStamp'])) continue;
-        // DEER eticheteaza intervalul cu ORA DE SFARSIT (ca fisierul Transilvania) -> shift -15 min
-        // ca sa stocam pe ora de START, la fel ca import_TRANSILVANIA. Ex: API 00:00 = [23:45->00:00]
-        // = ultimul sfert al zilei precedente -> stocat 23:45 ziua precedenta.
-        $ts = date('Y-m-d H:i:s', strtotime(str_replace('T', ' ', substr($rd['timeStamp'], 0, 19)) . ' -15 minutes'));
+        // API-ul e aliniat DIRECT cu stocarea noastra (confirmat: valorile din mijlocul zilei se
+        // potrivesc exact cu importul din fisier). NU se aplica shift. Nota: unele contoare mari
+        // raporteaza 00:00 = 0.000 (primul interval lipsa in API) - problema de date, nu de aliniere.
+        $ts = str_replace('T', ' ', substr($rd['timeStamp'], 0, 19));
         $agg[$pod][$ts] = ($agg[$pod][$ts] ?? 0.0) + (float)($rd['wi_1_8_0'] ?? 0);
     }
 }
