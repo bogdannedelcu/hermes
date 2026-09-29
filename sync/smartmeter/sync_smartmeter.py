@@ -68,7 +68,7 @@ def _job_begin():
                 summary VARCHAR(255) DEFAULT NULL, details MEDIUMTEXT,
                 PRIMARY KEY (id), KEY k_job (job), KEY k_started (started_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
-            c.execute("INSERT INTO sync_job_runs (job, started_at, status) VALUES ('smartmeter', NOW(), 'running')")
+            c.execute("INSERT INTO sync_job_runs (job, started_at, status) VALUES ('Retele Electrice', NOW(), 'running')")
             _JOB['id'] = c.lastrowid
         conn.commit()
     except Exception: pass
@@ -171,6 +171,23 @@ with conn.cursor() as cur:
         cur.executemany(sql, arows[i:i+1000])
 conn.commit()
 log(f'ARHIVA smartmeter_lpo: {len(arows)} inregistrari upsertate')
+
+# arhiva RAW ca dovada (in fisier, cu valorile exacte) + curatare > 31 zile
+try:
+    import gzip, glob
+    rawdir = f'{BASE}/rawapi/retele_electrice'
+    os.makedirs(rawdir, exist_ok=True)
+    stamp = time.strftime('%Y%m%d-%H%M%S')
+    recs = [{'pod': p, 'sample_date': d, 'energy_type': e, 'meter': mt,
+             'freq': freq, 'read_date': rd, 'sample_values': sv}
+            for (p, d, e, mt), (off, freq, rd, sv) in arch.items()]
+    with gzip.open(f'{rawdir}/retele-{stamp}.json.gz', 'wt', encoding='utf-8') as fh:
+        json.dump(recs, fh, ensure_ascii=False)
+    for fp in glob.glob(f'{rawdir}/*.json.gz'):
+        if os.path.getmtime(fp) < time.time() - 31 * 86400: os.remove(fp)
+    log(f'raw arhivat: {len(recs)} inregistrari -> {rawdir}/retele-{stamp}.json.gz')
+except Exception as e:
+    log(f'raw archive skip: {e}')
 
 # --- acoperire zilnica: marcheaza PODurile A1 citite pe zi (pt chart/lista) ---
 try:

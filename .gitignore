@@ -171,3 +171,6 @@ writable/*/*.csv
 #-------------------------
 public/status/
 
+
+# arhiva raw API (dovada, non-source)
+sync/rawapi/

@@ -22,7 +22,7 @@
  */
 
 require __DIR__ . '/lib.php';
-job_begin('distributie');
+job_begin('DEER');
 
 $GLOBALS['LOGFILE'] = __DIR__ . '/logs/distributie-' . date('Y-m-d') . '.log';
 $dryOnly = in_array('--dry', $argv, true);
@@ -49,6 +49,14 @@ if (!$lp['ok']) { logline('FETCH FAIL: ' . $lp['reason']); logline('=== aborted 
 $date   = $lp['date'];
 $meters = $lp['meters'];
 logline("loadprofile date=$date | contoare=" . count($meters));
+
+// arhiva RAW ca dovada (raspunsul brut, cu NULL/0 exact) + curatare > 31 zile
+$rawDir = __DIR__ . '/rawapi/deer';
+@mkdir($rawDir, 0775, true);
+@file_put_contents("$rawDir/deer-$date.json.gz",
+    gzencode(json_encode(['date' => $date, 'meters' => $meters], JSON_UNESCAPED_UNICODE)));
+foreach (glob("$rawDir/*.json.gz") as $f) if (@filemtime($f) < time() - 31 * 86400) @unlink($f);
+logline("raw arhivat: $rawDir/deer-$date.json.gz");
 
 // 3) aggregate: SUM wi_1_8_0 across devloc per (POD, timestamp)
 $agg = [];                       // pod => [ 'Y-m-d H:i:s' => kWh_sum ]
