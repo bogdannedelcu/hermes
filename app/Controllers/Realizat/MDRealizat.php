@@ -389,8 +389,10 @@ class MDRealizat extends BaseController
 		$customerNames = 'Toti Clientii';
 		if(isset($_GET['customersIDs']) && !empty($_GET['customersIDs']))
 		{
-			$customersIDs = explode(',',$_GET['customersIDs']);
-			$customerNames = implode(',', $this->importActualModel->getCustomersNames($customersIDs,$distributorID));
+			// curata elementele goale/nevalide (ex. "customersIDs=,630" -> ['630']) ca sa nu rezulte SQL "IN (,630)"
+			$customersIDs = array_values(array_filter(explode(',',$_GET['customersIDs']), fn($v)=>$v!=='' && is_numeric($v)));
+			if($customersIDs)
+				$customerNames = implode(',', $this->importActualModel->getCustomersNames($customersIDs,$distributorID));
 		}
 		
 		$includedPODs = explode(',', ($_GET['includedPODs'] ?? ''));

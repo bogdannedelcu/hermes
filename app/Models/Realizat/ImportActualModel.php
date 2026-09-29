@@ -548,16 +548,20 @@ class ImportActualModel extends Model
 		$month = (int)$ym[1];
 		$tableName = 'actual_readings_' . $month;
 
+		// sanitizare intrari (pot veni cu virgule in plus, ex ",630") -> doar intregi
+		$curveList = implode(',', array_filter(array_map('intval', explode(',', (string)$includedCurves))));
+		$custList  = implode(',', array_filter(array_map('intval', explode(',', (string)$customersIDs))));
+
 		// Curbele care au date orare in luna (filtru optional pe distribuitor / curbe alese)
 		$cw = "ar.year = $year";
 		if (is_numeric($distributorID) && $distributorID > 0) $cw .= " AND ac.distributor_id = $distributorID";
-		if (!empty($includedCurves))                          $cw .= " AND ar.curve_id IN ($includedCurves)";
+		if ($curveList !== '')                                $cw .= " AND ar.curve_id IN ($curveList)";
 		$curvesSub = "SELECT DISTINCT ar.curve_id FROM $tableName ar
 		              JOIN actual_curves ac ON ac.curve_id = ar.curve_id WHERE $cw";
 
 		// Sursa PODurilor = actual_readings (ca la filtrul de Clienti), NU consumptions/variance-pe-luna.
 		// Maparea curba->POD: variance (orice perioada) SAU curve_name=POD -> merge si pe luna curenta.
-		$custCond = !empty($customersIDs) ? " AND p.customer_id IN ($customersIDs)" : '';
+		$custCond = ($custList !== '') ? " AND p.customer_id IN ($custList)" : '';
 		$sql = "SELECT DISTINCT m.pod AS pod_no
 		        FROM ( SELECT acv.pod, acv.curve_id FROM actual_curves_variance acv
 		               UNION
