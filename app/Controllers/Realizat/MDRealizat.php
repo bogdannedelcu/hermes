@@ -437,7 +437,12 @@ class MDRealizat extends BaseController
 			$includedPODs = $this->importActualModel->getPODsByDistributorCustomer($distributorID,implode(',',$customersIDs),date('Y-m',$this->data['date']),($_GET['includedCurves'] ?? ''), true);
 		
 		
-		if(/*in_array($distributorID,[1,4,5]) && */count($includedPODs)>0 && !empty($includedPODs[0]))
+		// getRaportOrarEnel (split per POD) foloseste coeficientii din actual_curves_variance, care exista
+		// doar pe lunile cu import de consumuri. Daca lipsesc (ex. luna curenta), folosim getRaportOrar
+		// (direct din actual_readings pe customer/curbe) -> altfel ecranul ramane gol desi exista date orare.
+		$hasVariance = $this->importActualModel->varianceExistsForMonth((int)date('Y',$this->data['date']),(int)date('n',$this->data['date']));
+
+		if(count($includedPODs)>0 && !empty($includedPODs[0]) && $hasVariance)
 			$mcData = $this->importActualModel->getRaportOrarEnel($this->data['date'],$customersIDs,$distributorID,$includedPODs,$includedCurves, ($type == 1) );
 		else
 			$mcData = $this->importActualModel->getRaportOrar($this->data['date'],$customersIDs,$distributorID,$includedPODs,$includedCurves, ($type == 1) );

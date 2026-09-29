@@ -577,6 +577,13 @@ class ImportActualModel extends Model
 	}
 	
 	
+	// exista coeficienti (variance) pe luna? -> daca nu, raportul foloseste getRaportOrar (nu Enel)
+	function varianceExistsForMonth($year, $month)
+	{
+		$r = $this->db->query("SELECT 1 FROM actual_curves_variance WHERE YEAR(consumption_date)=".(int)$year." AND MONTH(consumption_date)=".(int)$month." LIMIT 1")->getRowArray();
+		return !empty($r);
+	}
+
 	function getRaportOrarEnel($date,$customersIDs,$distributorID,$includedPODs,$includedCurves, $qmin)
 	{
 		
